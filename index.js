@@ -25,29 +25,37 @@ Cache.prototype._createHash = unimplemented
 Cache.prototype.createReadStream = function(digest) { var self = this
   var output = through()
 
-  var input = this.__acquirePending(digest)
-  if (input) return input.pipe(output)
+  var pending = this.__pending.get(digest)
+  if (!pending) {
+    pending = through()
+      .once('readable', function() { self.__pending.delete(digest) })
+    this.__pending.set(digest, pending)
+    this.__acquireFs(arguments, pending)
+  }
 
-  var store = Path.join(this.path, 'store', digest)
-    , args = arguments
-
-  return fs.createReadStream(store)
-    .on('error', function(err) {
-      if (err.code !== 'ENOENT') return error(err)
-
-      var input = self.__acquirePending(digest)
-      if (input) return input.pipe(output)
-
-      self.__acquireFresh.apply(self, args)
-        .on('error', error)
-        .pipe(output)
-    })
+  return pending
+    .on('error', function(err) { output.emit('error', err) })
     .pipe(output)
-
-  function error(err) { return output.emit('error', err) }
 }
 
-Cache.prototype.__acquirePending = function(digest) { return this.__pending.get(digest) }
+Cache.prototype.__acquireFs = function(args, pending, paranoid) { var self = this
+  var digest = args[0]
+    , store = Path.join(this.path, 'store', digest)
+
+  var input = fs.createReadStream(store)
+    .on('error', function(err) {
+      if (err.code !== 'ENOENT') return pending.emit('error', err)
+      self.__acquireFresh(args, pending)
+    })
+  
+  if (!this.paranoid || paranoid === false)
+    return input.pipe(pending)
+
+  this.__hash(input, digest, function(err) {
+    if (err) return pending.emit(err)
+    self.__acquireFs(args, pending, false)
+  })
+}
 
 Cache.prototype.__hash = function(stream, digest, cb) {
   var hash = this._createHash()
@@ -63,16 +71,12 @@ Cache.prototype.__hash = function(stream, digest, cb) {
     })
 }
 
-Cache.prototype.__acquireFresh = function(digest) { var self = this
-  var output = through()
+Cache.prototype.__acquireFresh = function(args, pending) { var self = this
+  var digest = args[0]
     , tmp = Path.join(this.path, 'tmp', digest)
     , store = Path.join(this.path, 'store', digest)
-    , args = arguments
-
-  this.__pending.set(digest, output)
 
   createInput()
-  return output
 
   var input
   function createInput() {
@@ -96,7 +100,7 @@ Cache.prototype.__acquireFresh = function(digest) { var self = this
     if (!err) return makeStore()
 
     fs.unlink(tmp, noop)
-    return error(err)
+    error(err)
   }
 
   function makeStore() {
@@ -108,9 +112,8 @@ Cache.prototype.__acquireFresh = function(digest) { var self = this
   }
 
   function deliver() {
-    fs.createReadStream(store).pipe(output)
-    self.__pending['delete'](digest)
+    fs.createReadStream(store).pipe(pending)
   }
 
-  function error(err) { return output.emit('error', err) }
+  function error(err) { return pending.emit('error', err) }
 }
