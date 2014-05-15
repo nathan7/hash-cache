@@ -38,11 +38,14 @@ Cache.prototype.createReadStream = function(digest) { var self = this
     .pipe(output)
 }
 
+
+Cache.prototype.__store = function(digest) { return Path.join(this.path, 'store', digest) }
+Cache.prototype.__tmp = function(digest) { return Path.join(this.path, 'tmp', digest) }
+
 Cache.prototype.__acquireFs = function(args, pending, paranoid) { var self = this
   var digest = args[0]
-    , store = Path.join(this.path, 'store', digest)
 
-  var input = fs.createReadStream(store)
+  var input = fs.createReadStream(this.__store(digest))
     .on('error', function(err) {
       if (err.code !== 'ENOENT') return pending.emit('error', err)
       self.__acquireFresh(args, pending)
@@ -73,8 +76,8 @@ Cache.prototype.__hash = function(stream, digest, cb) {
 
 Cache.prototype.__acquireFresh = function(args, pending) { var self = this
   var digest = args[0]
-    , tmp = Path.join(this.path, 'tmp', digest)
-    , store = Path.join(this.path, 'store', digest)
+    , store = this.__store(digest)
+    , tmp = this.__tmp(digest)
 
   createInput()
 
