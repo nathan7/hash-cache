@@ -1,6 +1,6 @@
 {
   "name": "hash-cache",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "a simple, consistent on-disk cache.",
   "main": "index.js",
   "repository": {
