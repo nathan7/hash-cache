@@ -21,6 +21,9 @@ function Cache(opts) {
   this.__pending = Dict()
 }
 
+Cache.prototype.__store = function(digest) { return Path.join(this.path, 'store', digest) }
+Cache.prototype.__tmp = function(digest) { return Path.join(this.path, 'tmp', digest) }
+
 Cache.prototype._createReadStream = unimplemented
 Cache.prototype._createHash = unimplemented
 
@@ -52,10 +55,6 @@ Cache.prototype.createReadStream = function(digest) { var self = this
     .pipe(output)
 }
 
-
-Cache.prototype.__store = function(digest) { return Path.join(this.path, 'store', digest) }
-Cache.prototype.__tmp = function(digest) { return Path.join(this.path, 'tmp', digest) }
-
 Cache.prototype.__acquire = function(args, pending, paranoid) { var self = this
   var digest = args[0]
 
@@ -72,20 +71,6 @@ Cache.prototype.__acquire = function(args, pending, paranoid) { var self = this
     if (err) return pending.emit(err)
     self.__acquire(args, pending, false)
   })
-}
-
-Cache.prototype.__hash = function(stream, digest, cb) {
-  var hash = this._createHash()
-  return stream
-    .on('data', function(chunk) { hash.update(chunk) })
-    .on('end', function() {
-      var actualDigest = Buffer(hash.digest()).toString('hex')
-      if (actualDigest === digest) return cb()
-      var err = new Error('hashes did not match. expected `' + digest + '`, got `' + actualDigest + '`')
-      err.expected = digest
-      err.actual = actualDigest
-      cb(err)
-    })
 }
 
 Cache.prototype.__acquireFresh = function(args, pending) { var self = this
@@ -215,6 +200,20 @@ Cache.prototype.__acquireWatch = function(args, pending) { var self = this
       })
     })
   }
+}
+
+Cache.prototype.__hash = function(stream, digest, cb) {
+  var hash = this._createHash()
+  return stream
+    .on('data', function(chunk) { hash.update(chunk) })
+    .on('end', function() {
+      var actualDigest = Buffer(hash.digest()).toString('hex')
+      if (actualDigest === digest) return cb()
+      var err = new Error('hashes did not match. expected `' + digest + '`, got `' + actualDigest + '`')
+      err.expected = digest
+      err.actual = actualDigest
+      cb(err)
+    })
 }
 
 function errorFn(pending) {
