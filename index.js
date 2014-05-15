@@ -183,7 +183,14 @@ Cache.prototype.__acquireWatch = function(args, pending) { var self = this
       if (err && err.code === 'ENOENT') return
       if (err) return error(err)
       var delta = new Date() - stats.mtime
-      if (delta < self.timeout) return
+
+      if (delta < self.timeout) {
+        // not stale yet, we'll check again in a bit
+        timeout = setTimeout(checkStale, self.timeout / 2)
+        return
+      }
+
+      // stale file. goodbye!
       fs.unlink(tmp, function(err) {
         if (err && err.code === 'ENOENT') return
         if (err) return error(err)
