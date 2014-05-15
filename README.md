@@ -3,36 +3,6 @@
   a simple, consistent on-disk cache.
 
 ## API
-
-```javascript
-var Cache = require('hash-cache')
-  , crypto = require('crypto')
-  , http = require('http')
-  , through = require('through')
-
-function HttpSha1Cache(path) {
-  Cache.call(this, path)
-}
-
-
-HttpSha1Cache.prototype._storePath = function(hash) { return Path.join(this.path, 'store', hash.slice(0, 2), hash) }
-HttpSha1Cache.prototype._tmpPath = function(hash) { return Path.join(this.path, 'tmp', hash.slice(0, 2), hash) }
-
-HttpSha1Cache.prototype._createHash = function() { return crypto.createHash('sha1') }
-HttpSha1Cache.prototype._createReadStream = function(hash, url) {
-  var stream = through()
-  http.get(url)
-    .on('response', function(res) {
-      if (res.statusCode === 200) return res.pipe(stream)
-      var err = new Error('HTTP ' + res.statusCode)
-      err.statusCode = res.statusCode
-      stream.emit('error', err)
-    })
-    .on('error', function(err) { stream.emit('error', err) })
-  return stream
-}
-```
-
 ### Cache(path)
 ### Cache({ path, paranoid = false, timeout })
 
@@ -70,3 +40,35 @@ HttpSha1Cache.prototype._createReadStream = function(hash, url) {
 Cache.prototype._storePath = function(hash) { return Path.join(this.path, 'store', hash) }
 Cache.prototype._tmpPath = function(hash) { return Path.join(this.path, 'tmp', hash) }
 ```
+
+## Example
+
+```javascript
+'use strict';
+module.exports = MyCache
+var Cache = require('hash-cache')
+  , crypto = require('crypto')
+  , http = require('http')
+  , through = require('through')
+
+function MyCache(opts) { Cache.call(this, opts) }
+
+MyCache.prototype._storePath = function(hash) { return Path.join(this.path, 'store', hash.slice(0, 2), hash) }
+MyCache.prototype._tmpPath = function(hash) { return Path.join(this.path, 'tmp', hash.slice(0, 2), hash) }
+
+MyCache.prototype._createHash = function() { return crypto.createHash('sha1') }
+
+MyCache.prototype._createReadStream = function(hash, url) {
+  var stream = through()
+  http.get(url)
+    .on('response', function(res) {
+      if (res.statusCode === 200) return res.pipe(stream)
+      var err = new Error('HTTP ' + res.statusCode)
+      err.statusCode = res.statusCode
+      stream.emit('error', err)
+    })
+    .on('error', function(err) { stream.emit('error', err) })
+  return stream
+}
+```
+
