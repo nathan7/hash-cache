@@ -49,6 +49,20 @@ Cache.prototype.createReadStream = function(digest) { var self = this
 
 Cache.prototype.__acquirePending = function(digest) { return this.__pending.get(digest) }
 
+Cache.prototype.__hash = function(stream, digest, cb) {
+  var hash = this._createHash()
+  return stream
+    .on('data', function(chunk) { hash.update(chunk) })
+    .on('end', function() {
+      var actualDigest = Buffer(hash.digest()).toString('hex')
+      if (actualDigest === digest) return cb()
+      var err = new Error('hashes did not match. expected `' + digest + '`, got `' + actualDigest + '`')
+      err.expected = digest
+      err.actual = actualDigest
+      cb(err)
+    })
+}
+
 Cache.prototype.__acquireFresh = function(digest) { var self = this
   var output = through()
     , tmp = Path.join(this.path, 'tmp', digest)
@@ -73,25 +87,16 @@ Cache.prototype.__acquireFresh = function(digest) { var self = this
     mkdirp(Path.dirname(tmp), function(err) { if (err) error(err); else writeStream() })
   }
 
-  var hash
   function writeStream() {
-    hash = self._createHash()
-
-    input
-      .on('data', function(chunk) { hash.update(chunk) })
-      .on('end', compareHash)
+    self.__hash(input, digest, compareHash)
       .pipe(fs.createWriteStream(tmp))
       .on('error', error)
   }
 
-  function compareHash() {
-    var actualDigest = Buffer(hash.digest()).toString('hex')
-    if (actualDigest === digest) return makeStore()
+  function compareHash(err) {
+    if (!err) return makeStore()
 
     fs.unlink(tmp, noop)
-    var err = new Error('hashes did not match. expected `' + digest + '`, got `' + actualDigest + '`')
-    err.expected = digest
-    err.actual = actualDigest
     return error(err)
   }
 
