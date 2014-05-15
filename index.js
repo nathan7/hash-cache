@@ -9,10 +9,13 @@ var Path = require('path')
 function noop() {}
 function unimplemented() { throw new Error('unimplemented') }
 
-function Cache(path) {
-  if (!this || this === global) return new Cache(path)
+function Cache(opts) {
+  if (!this || this === global) return new Cache(opts)
 
-  this.path = path
+  if (typeof opts == 'string') opts = { path: opts }
+
+  this.path = opts.path
+  this.paranoid = !!opts.paranoid
   this.__pending = new Dict()
 }
 
@@ -67,7 +70,7 @@ Cache.prototype.__acquire = function(digest) { var self = this
 
   var hash
   function writeStream() {
-    hash = self.createHash()
+    hash = self._createHash()
 
     input
       .on('data', function(chunk) { hash.update(chunk) })
