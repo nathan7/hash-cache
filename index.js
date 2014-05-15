@@ -142,21 +142,19 @@ Cache.prototype.__acquireFresh = function(args, pending) { var self = this
   }
 
   function pipe() {
-    self.__hash(input, digest, function(err) {
-      if (err) return error(err)
-      makeStore()
-    }).pipe(output)
+    self.__hash(input, digest, error.else(makeStore))
+      .pipe(output)
   }
 
   function makeStore() {
-    mkdirp(Path.dirname(store), function(err) { if (err) error(err); else rename() })
+    mkdirp(Path.dirname(store), error.else(rename))
   }
 
   function rename() {
     // if our tmpfile has been unlinked due to timeouts, we fail hard here.
     // even worse, if someone else has started writing, we put a partial file there.
     // that's unfortunate, but there's not a lot better we can do.
-    fs.rename(tmp, store, function(err) { if (err) error(err); else deliver() })
+    fs.rename(tmp, store, error.else(deliver))
   }
 
   function deliver() {
@@ -220,6 +218,13 @@ function errorFn(pending) {
     pending.emit('error', err)
   }
   error.cleanup = []
+
+  error.else = function(fn) {
+    return function(err) {
+      if (err) error(err)
+      else fn()
+    }
+  }
 
   function runCleanup(fn) {
     try { fn() }
