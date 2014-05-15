@@ -16,7 +16,7 @@ function Cache(opts) {
 
   this.path = opts.path
   this.paranoid = !!opts.paranoid
-  this.__pending = new Dict()
+  this.__pending = Dict()
 }
 
 Cache.prototype._createReadStream = unimplemented
@@ -80,7 +80,7 @@ Cache.prototype.__acquire = function(digest) { var self = this
   }
 
   function compareHash() {
-    var actualDigest = (new Buffer(hash.digest())).toString('hex')
+    var actualDigest = Buffer(hash.digest()).toString('hex')
     if (actualDigest === digest) return makeStore()
 
     fs.unlink(tmp, noop)
