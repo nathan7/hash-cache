@@ -30,14 +30,18 @@ HttpSha1Cache.prototype._createReadStream = function(hash, url) {
 ```
 
 ### Cache(path)
+### Cache({ path, paranoid = false })
 
   Returns an instance of the cache, storing its stuff at the given path.
+
+  Paranoid mode, which is not enabled by default, ensures that files match the hash even if they're already cached.
+  This is only applicable if you're not using a filesystem that ensures on-disk consistency (such as ZFS) for some reason.
+  Personally, I'd consider it duct-tape in production systems.
 
 #### cache.createReadStream(hash, …args)
 
   Returns a readable stream for the item in the cache with given hash. If the item is not found in the cache, it defers to `cache._createReadStream(hash, …args)`.
   This may return an error if the hash does not match, but never the wrong content.
-  Note that on-disk corruption *after* something has been written to the cache is not taken into account — you're assumed to be using a sane filesystem that ensures on-disk consistency, such as ZFS.
 
 #### cache._createHash()
 
