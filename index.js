@@ -70,7 +70,6 @@ Cache.prototype.__acquireFresh = function(digest) { var self = this
     , args = arguments
 
   this.__pending.set(digest, output)
-  console.log(this.__pending.get(digest))
 
   createInput()
   return output
