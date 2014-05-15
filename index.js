@@ -219,7 +219,7 @@ Cache.prototype.__acquireWatch = function(args, pending) { var self = this
 
 function errorFn(pending) {
   function error(err) {
-    error.cleanup.forEach(runCleanup)
+    error.cleanup.forEach(function(fn) { fn() })
     pending.emit('error', err)
   }
   error.cleanup = []
@@ -229,11 +229,6 @@ function errorFn(pending) {
       if (err) error(err)
       else fn()
     }
-  }
-
-  function runCleanup(fn) {
-    try { fn() }
-    catch (e) {}
   }
 
   return error
