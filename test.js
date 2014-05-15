@@ -1,15 +1,14 @@
 'use strict';
 var Cache = require('./')
   , fs = require('fs')
-  , rimraf = require('rimraf')
+  , mkdirp = require('mkdirp')
   , crypto = require('crypto')
   , through = require('through')
   , http = require('http')
   , path = __dirname + '/test'
   , cache = Cache(path)
 
-rimraf.sync(path)
-fs.mkdirSync(path)
+mkdirp.sync(path + '/output')
 
 cache._createHash = function() { return crypto.createHash('sha1') }
 cache._createReadStream = function(hash, url) {
@@ -27,8 +26,12 @@ cache._createReadStream = function(hash, url) {
 
 cache
   .createReadStream('4f8edd5e8cfb55cd2755ac6505593c2b4d5510f8', 'http://registry.npmjs.org/npm/-/npm-1.4.10.tgz')
-  .pipe(fs.createWriteStream(path + '/npm.tgz'))
+  .pipe(fs.createWriteStream(path + '/output/npm' + rand() + '.tgz'))
 
 cache
   .createReadStream('4f8edd5e8cfb55cd2755ac6505593c2b4d5510f8', 'http://registry.npmjs.org/npm/-/npm-1.4.10.tgz')
-  .pipe(fs.createWriteStream(path + '/another-npm.tgz'))
+  .pipe(fs.createWriteStream(path + '/output/npm' + rand() + '.tgz'))
+
+function rand() {
+  return (Math.random() * 0xFFFFFFFF) | 0
+}
