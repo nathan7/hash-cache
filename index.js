@@ -150,7 +150,8 @@ Cache.prototype.__acquireFresh = function(args, pending) { var self = this
   }
 
   function deliver() {
-    fs.createReadStream(store).pipe(pending)
+    // up we go again
+    self.__acquire(args, pending)
   }
 }
 
