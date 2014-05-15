@@ -29,6 +29,7 @@ Cache.prototype.createReadStream = function(digest) { var self = this
   if (!pending) {
     pending = through()
       .once('readable', function() { self.__pending.delete(digest) })
+    pending.setMaxListeners(0)
     this.__pending.set(digest, pending)
     this.__acquireFs(arguments, pending)
   }
@@ -52,7 +53,7 @@ Cache.prototype.__acquireFs = function(args, pending, paranoid) { var self = thi
     })
 
   if (!this.paranoid || paranoid === false)
-    return input.pipe(pending)
+    return input.on('open', function() { this.pipe(pending) })
 
   this.__hash(input, digest, function(err) {
     if (err) return pending.emit(err)
