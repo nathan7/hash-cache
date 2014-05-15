@@ -48,10 +48,12 @@ Cache.prototype.createReadStream = function(digest) { var self = this
 }
 
 Cache.prototype.__acquire = function(digest) { var self = this
-  var output = this.__pending[digest] = through()
+  var output = through()
     , tmp = Path.join(this.path, 'tmp', digest)
     , store = Path.join(this.path, 'store', digest)
     , args = arguments
+
+  this.__pending.set(digest, output)
 
   createInput()
   return output
@@ -100,7 +102,7 @@ Cache.prototype.__acquire = function(digest) { var self = this
 
   function deliver() {
     fs.createReadStream(store).pipe(output)
-    delete self.__pending[digest]
+    self.__pending['delete'](digest)
   }
 
   function error(err) { return output.emit('error', err) }
