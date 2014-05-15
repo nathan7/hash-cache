@@ -92,39 +92,37 @@ Cache.prototype.__acquireFresh = function(args, pending) { var self = this
 
   var output
   function writeStream() {
-    fs.open(tmp, 'wx', function(err, fd) {
-      if (err) {
+    output = fs.createWriteStream(tmp, { flags: 'wx' })
+      .on('open', function(fd) {
+        // it's ours! yay!
+        // let's make sure we clean up, no matter what happens
+        error.cleanup.push(function() { fs.unlink(tmp, noop) })
+        readStream()
+
+        // if we have a timeout, do our best to ensure it doesn't trigger
+        if (!self.timeout) return
+        var timeout
+        touch()
+        output.on('close', clearTouch)
+        error.cleanup.push(clearTouch)
+
+        function touch() {
+          timeout = setTimeout(touch, self.timeout / 2)
+          var present = +new Date()
+          fs.futimes(fd, present, present, noop)
+        }
+
+        function clearTouch() {
+          clearTimeout(timeout)
+          timeout = null
+        }
+
+      })
+      .on('error', function(err) {
         if (err.code !== 'EEXIST') return error(err)
         // someone else has already started fetching this, we'll wait for them
         return self.__acquireWatch(args, pending)
-      }
-
-      // it's ours! yay!
-      // let's make sure we clean up, no matter what happens
-      error.cleanup.push(function() { fs.unlink(tmp, noop) })
-
-      output = fs.createWriteStream(tmp, { fd: fd })
-        .on('error', error)
-      readStream()
-
-      // if we have a timeout, do our best to ensure it doesn't trigger
-      if (!self.timeout) return
-      var timeout
-      touch()
-      output.on('close', clearTouch)
-      error.cleanup.push(clearTouch)
-
-      function touch() {
-        timeout = setTimeout(touch, self.timeout / 2)
-        var present = +new Date()
-        fs.futimes(fd, present, present, noop)
-      }
-
-      function clearTouch() {
-        clearTimeout(timeout)
-        timeout = null
-      }
-    })
+      })
   }
 
   var input
