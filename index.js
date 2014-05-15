@@ -165,6 +165,7 @@ Cache.prototype.__acquireFresh = function(args, pending) { var self = this
 Cache.prototype.__acquireWatch = function(args, pending) { var self = this
   var digest = args[0]
     , tmp = self.__tmp(digest)
+    , error = errorFn(pending)
 
   // let's watch if they finish
   var watcher = fs.watch(tmp)
@@ -174,11 +175,17 @@ Cache.prototype.__acquireWatch = function(args, pending) { var self = this
       retry()
     })
 
-  function retry() {
+  error.cleanup.push(cleanup)
+  function cleanup() {
     if (timeout) clearTimeout(timeout)
     if (!watcher) return
     watcher.close()
     watcher = null
+  }
+
+  function retry() {
+    if (!watcher) return
+    cleanup()
     // they already finished while we were firing up our watcher. let's have another go at everything.
     self.__acquire(args, pending)
   }
@@ -208,8 +215,6 @@ Cache.prototype.__acquireWatch = function(args, pending) { var self = this
       })
     })
   }
-
-  function error(err) { return pending.emit('error', err) }
 }
 
 function errorFn(pending) {
