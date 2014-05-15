@@ -21,8 +21,8 @@ function Cache(opts) {
   this.__pending = Object.create(null)
 }
 
-Cache.prototype.__store = function(digest) { return Path.join(this.path, 'store', digest) }
-Cache.prototype.__tmp = function(digest) { return Path.join(this.path, 'tmp', digest) }
+Cache.prototype._storePath = function(digest) { return Path.join(this.path, 'store', digest) }
+Cache.prototype._tmpPath = function(digest) { return Path.join(this.path, 'tmp', digest) }
 
 Cache.prototype._createReadStream = unimplemented
 Cache.prototype._createHash = unimplemented
@@ -67,7 +67,7 @@ Cache.prototype.createReadStream = function(digest) { var self = this
 Cache.prototype.__acquire = function(args, pending, paranoid) { var self = this
   var digest = args[0]
 
-  var input = fs.createReadStream(this.__store(digest))
+  var input = fs.createReadStream(this._storePath(digest))
     .on('error', function(err) {
       if (err.code !== 'ENOENT') return pending.emit('error', err)
       self.__acquireFresh(args, pending)
@@ -84,8 +84,8 @@ Cache.prototype.__acquire = function(args, pending, paranoid) { var self = this
 
 Cache.prototype.__acquireFresh = function(args, pending) { var self = this
   var digest = args[0]
-    , store = this.__store(digest)
-    , tmp = this.__tmp(digest)
+    , store = this._storePath(digest)
+    , tmp = this._tmpPath(digest)
     , error = errorFn(pending)
 
   mkdirp(Path.dirname(tmp), function(err) { if (err) error(err); else writeStream() })
@@ -156,7 +156,7 @@ Cache.prototype.__acquireFresh = function(args, pending) { var self = this
 
 Cache.prototype.__acquireWatch = function(args, pending) { var self = this
   var digest = args[0]
-    , tmp = self.__tmp(digest)
+    , tmp = self._tmpPath(digest)
     , error = errorFn(pending)
 
   // let's watch if they finish

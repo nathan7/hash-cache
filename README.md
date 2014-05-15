@@ -14,6 +14,10 @@ function HttpSha1Cache(path) {
   Cache.call(this, path)
 }
 
+
+HttpSha1Cache.prototype._storePath = function(hash) { return Path.join(this.path, 'store', hash.slice(0, 2), hash) }
+HttpSha1Cache.prototype._tmpPath = function(hash) { return Path.join(this.path, 'tmp', hash.slice(0, 2), hash) }
+
 HttpSha1Cache.prototype._createHash = function() { return crypto.createHash('sha1') }
 HttpSha1Cache.prototype._createReadStream = function(hash, url) {
   var stream = through()
@@ -55,3 +59,14 @@ HttpSha1Cache.prototype._createReadStream = function(hash, url) {
 
   Should return a readable stream that hopefully has contents matching the hash. All the arguments to `cache.createReadStream(hash, …args)` are simply passed on.
 
+#### cache._storePath(hash)
+#### cache._tmpPath(hash)
+
+  Should return a path in the given place.
+
+  Default implementations are provided:
+
+```javascript
+Cache.prototype._storePath = function(hash) { return Path.join(this.path, 'store', hash) }
+Cache.prototype._tmpPath = function(hash) { return Path.join(this.path, 'tmp', hash) }
+```
