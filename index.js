@@ -30,7 +30,18 @@ Cache.prototype.createReadStream = function(digest) { var self = this
   var pending = this.__pending.get(digest)
   if (!pending) {
     pending = through()
-      .once('readable', function() { self.__pending.delete(digest) })
+
+    var removed = false
+      , remove = function() {
+          if (removed) return
+          pending.removeListener('error', remove)
+          self.__pending.delete(digest)
+          removed = true
+        }
+    pending
+      .once('readable', remove)
+      .once('error', remove)
+
     pending.setMaxListeners(0)
     this.__pending.set(digest, pending)
     this.__acquire(arguments, pending)
