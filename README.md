@@ -45,7 +45,7 @@ HttpSha1Cache.prototype._createReadStream = function(hash, url) {
 #### cache.createReadStream(hash, …args)
 
   Returns a readable stream for the item in the cache with given hash. If the item is not found in the cache, it defers to `cache._createReadStream(hash, …args)`.
-  This may return an error if the hash does not match, but never the wrong content.
+  This may emit an error on the stream, but never a single byte of wrong content.
 
 #### cache._createHash()
 
