@@ -4,7 +4,6 @@ var Path = require('path')
   , fs = require('fs')
   , mkdirp = require('mkdirp')
   , through = require('through')
-  , Dict = require('dict')
   , RE_HEX = /^[0-9a-f]$/
 
 function noop() {}
@@ -19,7 +18,7 @@ function Cache(opts) {
   this.path = opts.path + ''
   this.paranoid = !!opts.paranoid
   this.timeout = opts.timeout | 0
-  this.__pending = Dict()
+  this.__pending = Object.create(null)
 }
 
 Cache.prototype.__store = function(digest) { return Path.join(this.path, 'store', digest) }
@@ -40,7 +39,7 @@ Cache.prototype.createReadStream = function(digest) { var self = this
     })
   }
 
-  var pending = this.__pending.get(digest)
+  var pending = this.__pending[digest]
   if (!pending) {
     pending = through()
 
@@ -48,7 +47,7 @@ Cache.prototype.createReadStream = function(digest) { var self = this
       , remove = function() {
           if (removed) return
           pending.removeListener('error', remove)
-          self.__pending.delete(digest)
+          delete self.__pending[digest]
           removed = true
         }
     pending
@@ -56,7 +55,7 @@ Cache.prototype.createReadStream = function(digest) { var self = this
       .once('error', remove)
 
     pending.setMaxListeners(0)
-    this.__pending.set(digest, pending)
+    this.__pending[digest] = pending
     this.__acquire(arguments, pending)
   }
 

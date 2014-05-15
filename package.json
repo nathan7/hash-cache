@@ -21,7 +21,6 @@
   },
   "homepage": "https://github.com/nathan7/hash-cache",
   "dependencies": {
-    "dict": "^1.4.0",
     "mkdirp": "^0.5.0",
     "through": "^2.3.4"
   },
