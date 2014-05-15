@@ -13,8 +13,9 @@ function Cache(opts) {
   if (!this || this === global) return new Cache(opts)
 
   if (typeof opts == 'string') opts = { path: opts }
+  if (typeof opts.path != 'string') throw new TypeError('path must be a string')
 
-  this.path = opts.path
+  this.path = opts.path + ''
   this.paranoid = !!opts.paranoid
   this.timeout = opts.timeout | 0
   this.__pending = Dict()
