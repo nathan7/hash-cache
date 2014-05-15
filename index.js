@@ -84,18 +84,34 @@ Cache.prototype.__acquireFresh = function(args, pending) { var self = this
   mkdirp(Path.dirname(tmp), function(err) { if (err) error(err); else writeStream() })
 
   var output
+    , resetTimer
   function writeStream() {
-    fs.createWriteStream(tmp, { flags: 'wx' })
-      .on('open', function() {
-        // it's ours! yay!
-        output = this
-        readStream()
-      })
-      .on('error', function(err) {
+    fs.open(tmp, 'wx', function(err, fd) {
+      if (err) {
         if (err.code !== 'EEXIST') return error(err)
         // someone else has already started fetching this, we'll wait for them
-        self.__acquireWatch(args, pending)
-      })
+        return self.__acquireWatch(args, pending)
+      }
+
+      // it's ours! yay!
+      output = fs.createWriteStream(tmp, { fd: fd })
+        .on('error', error)
+      readStream()
+
+      // if we have a timeout, do our best to ensure it doesn't trigger
+      if (!self.timeout) return
+      var timeout
+      function touch() {
+        setTimeout(touch, self.timeout / 2)
+        var present = +new Date()
+        fs.futimes(fd, present, present, noop)
+      }
+      resetTimer = function() {
+        clearTimeout(timeout)
+        timeout = setTimeout(touch, self.timeout / 2)
+      }
+      output.on('close', function() { clearTimeout(timeout) })
+    })
   }
 
   var input
@@ -107,13 +123,13 @@ Cache.prototype.__acquireFresh = function(args, pending) { var self = this
   }
 
   function pipe() {
-   self.__hash(input, digest, compareHash)
+    if (self.timeout) input.on('data', resetTimer)
+    self.__hash(input, digest, compareHash)
       .pipe(output)
   }
 
   function compareHash(err) {
     if (!err) return makeStore()
-
     fs.unlink(tmp, noop)
     error(err)
   }

@@ -35,8 +35,8 @@ HttpSha1Cache.prototype._createReadStream = function(hash, url) {
   Returns an instance of the cache, storing its stuff at the given path.
 
   If a timeout is given (in milliseconds), the staleness check kicks in after 100ms of waiting for a temporary file.
-  When the last write is past the timeout, it'll remove the temporary file and try again.
-  If the other process is still running, it's entirely unaware of this. It might move the half-written *new* temporary file into the cache.
+  A working process resets the timeout on every write and every half timeout period.
+  If the timeout passes, we remove the temporary file and try again.
 
   Paranoid mode, which is not enabled by default, ensures that files match the hash even if they're already cached.
   This is only applicable if you're not using a filesystem that ensures on-disk consistency (such as ZFS) for some reason.
