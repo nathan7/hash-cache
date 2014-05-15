@@ -79,12 +79,7 @@ Cache.prototype.__acquireFresh = function(args, pending) { var self = this
     , store = this.__store(digest)
     , tmp = this.__tmp(digest)
 
-  maketmp()
-
-  var input
-  function maketmp() {
-    mkdirp(Path.dirname(tmp), function(err) { if (err) error(err); else writeStream() })
-  }
+  mkdirp(Path.dirname(tmp), function(err) { if (err) error(err); else writeStream() })
 
   var output
   function writeStream() {
@@ -113,6 +108,7 @@ Cache.prototype.__acquireFresh = function(args, pending) { var self = this
       })
   }
 
+  var input
   function readStream() {
     try { input = self._createReadStream.apply(self, args) }
     catch (e) { return error(e) }
