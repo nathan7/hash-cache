@@ -92,6 +92,7 @@ Cache.prototype.__acquireFresh = function(args, pending) { var self = this
   var digest = args[0]
     , store = this.__store(digest)
     , tmp = this.__tmp(digest)
+    , error = errorFn(pending)
 
   mkdirp(Path.dirname(tmp), function(err) { if (err) error(err); else writeStream() })
 
@@ -105,6 +106,9 @@ Cache.prototype.__acquireFresh = function(args, pending) { var self = this
       }
 
       // it's ours! yay!
+      // let's make sure we clean up, no matter what happens
+      error.cleanup.push(function() { fs.unlink(tmp, noop) })
+
       output = fs.createWriteStream(tmp, { fd: fd })
         .on('error', error)
       readStream()
@@ -113,9 +117,8 @@ Cache.prototype.__acquireFresh = function(args, pending) { var self = this
       if (!self.timeout) return
       var timeout
       touch()
-      output
-        .on('close', clearTouch)
-        .on('error', clearTouch)
+      output.on('close', clearTouch)
+      error.cleanup.push(clearTouch)
 
       function touch() {
         timeout = setTimeout(touch, self.timeout / 2)
@@ -139,14 +142,10 @@ Cache.prototype.__acquireFresh = function(args, pending) { var self = this
   }
 
   function pipe() {
-    self.__hash(input, digest, compareHash)
-      .pipe(output)
-  }
-
-  function compareHash(err) {
-    if (!err) return makeStore()
-    fs.unlink(tmp, noop)
-    error(err)
+    self.__hash(input, digest, function(err) {
+      if (err) return error(err)
+      makeStore()
+    }).pipe(output)
   }
 
   function makeStore() {
@@ -163,8 +162,6 @@ Cache.prototype.__acquireFresh = function(args, pending) { var self = this
   function deliver() {
     fs.createReadStream(store).pipe(pending)
   }
-
-  function error(err) { return pending.emit('error', err) }
 }
 
 Cache.prototype.__acquireWatch = function(args, pending) { var self = this
@@ -215,4 +212,19 @@ Cache.prototype.__acquireWatch = function(args, pending) { var self = this
   }
 
   function error(err) { return pending.emit('error', err) }
+}
+
+function errorFn(pending) {
+  function error(err) {
+    error.cleanup.forEach(runCleanup)
+    pending.emit('error', err)
+  }
+  error.cleanup = []
+
+  function runCleanup(fn) {
+    try { fn() }
+    catch (e) {}
+  }
+
+  return error
 }
