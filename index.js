@@ -151,7 +151,8 @@ Cache.prototype.__acquireFresh = function(args, pending) { var self = this
 
   function deliver() {
     // up we go again
-    self.__acquire(args, pending)
+    // we explicitly disable paranoid mode, because we just checked the hash of what we wrote
+    self.__acquire(args, pending, false)
   }
 }
 
