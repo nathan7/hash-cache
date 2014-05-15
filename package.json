@@ -1,0 +1,28 @@
+{
+  "name": "hash-cache",
+  "version": "1.0.0",
+  "description": "a simple, consistent on-disk cache.",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/nathan7/hash-cache.git"
+  },
+  "keywords": [
+    "hash",
+    "cache",
+    "on-disk",
+    "consistent",
+    "reliable"
+  ],
+  "author": "Nathan Zadoks",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/nathan7/hash-cache/issues"
+  },
+  "homepage": "https://github.com/nathan7/hash-cache",
+  "dependencies": {
+    "dict": "^1.4.0",
+    "mkdirp": "^0.5.0",
+    "through": "^2.3.4"
+  }
+}
