@@ -2,11 +2,6 @@
 
   a simple, consistent on-disk cache.
 
-## BIG FAT WARNING
-
-  This cache doesn't support concurrent access from multiple processes yet.
-  Concurrency is hard, okay? I'm working on it.
-
 ## API
 
 ```javascript

@@ -79,24 +79,50 @@ Cache.prototype.__acquireFresh = function(args, pending) { var self = this
     , store = this.__store(digest)
     , tmp = this.__tmp(digest)
 
-  createInput()
+  maketmp()
 
   var input
-  function createInput() {
-    try { input = self._createReadStream.apply(self, args) }
-    catch (e) { return error(e) }
-    input.on('error', error)
-    maketmp()
-  }
-
   function maketmp() {
     mkdirp(Path.dirname(tmp), function(err) { if (err) error(err); else writeStream() })
   }
 
+  var output
   function writeStream() {
-    self.__hash(input, digest, compareHash)
-      .pipe(fs.createWriteStream(tmp))
-      .on('error', error)
+    fs.createWriteStream(tmp, { flags: 'wx' })
+      .on('open', function() {
+        // it's ours! yay!
+        output = this
+        readStream()
+      })
+      .on('error', function(err) {
+        if (err.code !== 'EEXIST') return error(err)
+        // someone else has already started fetching this
+        // let's watch if they finish
+        fs.watch(tmp)
+          .on('change', function() {
+            this.close()
+            // something changed! let's go check if our file is in the store now.
+            self.__acquireFs(args, pending)
+          })
+          .on('error', function(err) {
+            this.close()
+            if (err.code !== 'ENOENT') return error(err)
+            // they already finished while we were firing up our watcher. let's have another go at everything.
+            self.__acquireFs(args, pending)
+          })
+      })
+  }
+
+  function readStream() {
+    try { input = self._createReadStream.apply(self, args) }
+    catch (e) { return error(e) }
+    input.on('error', error)
+    pipe()
+  }
+
+  function pipe() {
+   self.__hash(input, digest, compareHash)
+      .pipe(output)
   }
 
   function compareHash(err) {
