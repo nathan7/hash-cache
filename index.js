@@ -16,6 +16,7 @@ function Cache(opts) {
 
   this.path = opts.path
   this.paranoid = !!opts.paranoid
+  this.timeout = opts.timeout | 0
   this.__pending = Dict()
 }
 
@@ -96,16 +97,37 @@ Cache.prototype.__acquireFresh = function(args, pending) { var self = this
         // let's watch if they finish
         fs.watch(tmp)
           .on('change', function() {
+            if (timeout) clearTimeout(timeout)
             this.close()
             // something changed! let's go check if our file is in the store now.
             self.__acquireFs(args, pending)
           })
           .on('error', function(err) {
+            if (timeout) clearTimeout(timeout)
             this.close()
             if (err.code !== 'ENOENT') return error(err)
             // they already finished while we were firing up our watcher. let's have another go at everything.
             self.__acquireFs(args, pending)
           })
+
+        // if we have a timeout, let's check if things haven't gone stale
+        // we'll leave this until the next 100ms so we don't fire this up too quickly, stat calls cost
+        var timeout
+        if (self.timeout) setTimeout(checkStale, 100)
+        function checkStale() {
+          timeout = null
+          fs.stat(tmp, function(err, stats) {
+            // disappeared in the meanwhile, the watcher will have caught this
+            if (err && err.code === 'ENOENT') return
+            if (err) return error(err)
+            var delta = new Date() - stats.mtime
+            if (delta < self.timeout) return
+            fs.unlink(tmp, function(err) {
+              if (err && err.code === 'ENOENT') return
+              if (err) return error(err)
+            })
+          })
+        }
       })
   }
 
@@ -134,6 +156,9 @@ Cache.prototype.__acquireFresh = function(args, pending) { var self = this
   }
 
   function rename() {
+    // if our tmpfile has been unlinked due to timeouts, we fail hard here.
+    // even worse, if someone else has started writing, we put a partial file there.
+    // that's unfortunate, but there's not a lot better we can do.
     fs.rename(tmp, store, function(err) { if (err) error(err); else deliver() })
   }
 
