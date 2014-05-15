@@ -47,7 +47,7 @@ Cache.prototype.__acquireFs = function(args, pending, paranoid) { var self = thi
       if (err.code !== 'ENOENT') return pending.emit('error', err)
       self.__acquireFresh(args, pending)
     })
-  
+
   if (!this.paranoid || paranoid === false)
     return input.pipe(pending)
 
