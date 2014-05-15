@@ -2,6 +2,20 @@
 
   a simple, consistent on-disk cache.
 
+## Design goals
+
+  * Never return invalid data. Unless data has been proven to match the hash, it won't be returned.
+    Many filesystems don't protect against data corruption, so it should be possible to even check verified files.
+  * Be agnostic to what is being cached. As long as it arrives as a readable bytestream, it's cacheable.
+  * Combine as many requests for the same thing as possible.
+    Until the first byte flows out of the ReadStream, it combines every request into one.
+  * Remain correct in the face of concurrency.
+    We go to great lengths to ensure processes wait for each other and share work.
+    Even across processes, requests are combined, safely.
+    Only process-local failure is considered a hard failure.
+  * Use as few file descriptors as possible.
+    File descriptors are often scarce, and many operations can be run on an existing fd.
+
 ## API
 ### Cache(path)
 ### Cache({ path, paranoid = false, timeout })
