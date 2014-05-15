@@ -5,6 +5,7 @@ var Path = require('path')
   , mkdirp = require('mkdirp')
   , through = require('through')
   , Dict = require('dict')
+  , RE_HEX = /^[0-9a-f]$/
 
 function noop() {}
 function unimplemented() { throw new Error('unimplemented') }
@@ -28,7 +29,16 @@ Cache.prototype._createReadStream = unimplemented
 Cache.prototype._createHash = unimplemented
 
 Cache.prototype.createReadStream = function(digest) { var self = this
+  digest = String(digest).toLowerCase()
+
   var output = through()
+
+  if (!RE_HEX.test(digest)) {
+    return output
+    process.nextTick(function() {
+      output.emit(new Error('not a valid hash: `' + digest + '`'))
+    })
+  }
 
   var pending = this.__pending.get(digest)
   if (!pending) {
