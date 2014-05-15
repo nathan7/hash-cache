@@ -96,7 +96,6 @@ Cache.prototype.__acquireFresh = function(args, pending) { var self = this
   mkdirp(Path.dirname(tmp), function(err) { if (err) error(err); else writeStream() })
 
   var output
-    , resetTimer
   function writeStream() {
     fs.open(tmp, 'wx', function(err, fd) {
       if (err) {
@@ -113,16 +112,21 @@ Cache.prototype.__acquireFresh = function(args, pending) { var self = this
       // if we have a timeout, do our best to ensure it doesn't trigger
       if (!self.timeout) return
       var timeout
+      touch()
+      output
+        .on('close', clearTouch)
+        .on('error', clearTouch)
+
       function touch() {
-        setTimeout(touch, self.timeout / 2)
+        timeout = setTimeout(touch, self.timeout / 2)
         var present = +new Date()
         fs.futimes(fd, present, present, noop)
       }
-      resetTimer = function() {
+
+      function clearTouch() {
         clearTimeout(timeout)
-        timeout = setTimeout(touch, self.timeout / 2)
+        timeout = null
       }
-      output.on('close', function() { clearTimeout(timeout) })
     })
   }
 
@@ -135,7 +139,6 @@ Cache.prototype.__acquireFresh = function(args, pending) { var self = this
   }
 
   function pipe() {
-    if (self.timeout) input.on('data', resetTimer)
     self.__hash(input, digest, compareHash)
       .pipe(output)
   }
