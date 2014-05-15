@@ -28,3 +28,7 @@ cache._createReadStream = function(hash, url) {
 cache
   .createReadStream('4f8edd5e8cfb55cd2755ac6505593c2b4d5510f8', 'http://registry.npmjs.org/npm/-/npm-1.4.10.tgz')
   .pipe(fs.createWriteStream(path + '/npm.tgz'))
+
+cache
+  .createReadStream('4f8edd5e8cfb55cd2755ac6505593c2b4d5510f8', 'http://registry.npmjs.org/npm/-/npm-1.4.10.tgz')
+  .pipe(fs.createWriteStream(path + '/another-npm.tgz'))

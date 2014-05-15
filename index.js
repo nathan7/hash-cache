@@ -24,36 +24,39 @@ Cache.prototype._createHash = unimplemented
 
 Cache.prototype.createReadStream = function(digest) { var self = this
   var output = through()
-    , store = Path.join(this.path, 'store', digest)
 
-  var pending = this.__pending.get(digest)
-  if (pending)
-    return pending
-      .on('error', error)
-      .pipe(output)
+  var input = this.__acquirePending(digest)
+  if (input) return input.pipe(output)
 
-  var args = arguments
-  fs.createReadStream(store)
-    .on('open', function() { this.pipe(output) })
+  var store = Path.join(this.path, 'store', digest)
+    , args = arguments
+
+  return fs.createReadStream(store)
     .on('error', function(err) {
       if (err.code !== 'ENOENT') return error(err)
-      self.__acquire.apply(self, args)
-        .pipe(output)
-        .on('error', error)
-    })
 
-  return output
+      var input = self.__acquirePending(digest)
+      if (input) return input.pipe(output)
+
+      self.__acquireFresh.apply(self, args)
+        .on('error', error)
+        .pipe(output)
+    })
+    .pipe(output)
 
   function error(err) { return output.emit('error', err) }
 }
 
-Cache.prototype.__acquire = function(digest) { var self = this
+Cache.prototype.__acquirePending = function(digest) { return this.__pending.get(digest) }
+
+Cache.prototype.__acquireFresh = function(digest) { var self = this
   var output = through()
     , tmp = Path.join(this.path, 'tmp', digest)
     , store = Path.join(this.path, 'store', digest)
     , args = arguments
 
   this.__pending.set(digest, output)
+  console.log(this.__pending.get(digest))
 
   createInput()
   return output
