@@ -107,22 +107,20 @@ Cache.prototype.__acquireFresh = function(args, pending) { var self = this
 
         // if we have a timeout, do our best to ensure it doesn't trigger
         if (!self.timeout) return
-        var timeout
-        touch()
+        var interval = setInterval(touch, self.timeout / 2)
         output.on('close', clearTouch)
         error.cleanup.push(clearTouch)
 
         function touch() {
-          timeout = setTimeout(touch, self.timeout / 2)
           var present = +new Date()
           fs.futimes(fd, present, present, noop)
+          setTimeout(touch, self.timeout / 2)
         }
 
         function clearTouch() {
-          clearTimeout(timeout)
-          timeout = null
+          clearInterval(interval)
+          interval = null
         }
-
       })
       .on('error', function(err) {
         if (err.code !== 'EEXIST') return error(err)
@@ -177,7 +175,6 @@ Cache.prototype.__acquireWatch = function(args, pending) { var self = this
 
   error.cleanup.push(cleanup)
   function cleanup() {
-    if (timeout) clearTimeout(timeout)
     if (!watcher) return
     watcher.close()
     watcher = null
@@ -192,7 +189,7 @@ Cache.prototype.__acquireWatch = function(args, pending) { var self = this
 
   // if we have a timeout, let's check if things haven't gone stale
   // we'll leave this until the next 100ms so we don't fire this up too quickly, stat calls cost
-  var timeout = self.timeout && setTimeout(checkStale, 100)
+  if (self.timeout) setTimeout(checkStale, 100)
   function checkStale() {
     fs.stat(tmp, function(err, stats) {
       if (!watcher) return
@@ -201,11 +198,9 @@ Cache.prototype.__acquireWatch = function(args, pending) { var self = this
 
       var delta = new Date() - stats.mtime
 
-      if (delta < self.timeout) {
-        // not stale yet, we'll check again in a bit
-        timeout = setTimeout(checkStale, self.timeout / 2)
-        return
-      }
+      // not stale yet, we'll check again in a bit
+      if (delta < self.timeout)
+        return setTimeout(checkStale, self.timeout / 2)
 
       // stale file. goodbye!
       fs.unlink(tmp, function(err) {
