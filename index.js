@@ -35,7 +35,7 @@ Cache.prototype.createReadStream = function(digest) { var self = this
   if (!RE_HEX.test(digest)) {
     return output
     process.nextTick(function() {
-      output.emit(new Error('not a valid hash: `' + digest + '`'))
+      output.emit('error', new Error('not a valid hash: `' + digest + '`'))
     })
   }
 
