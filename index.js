@@ -81,7 +81,7 @@ Cache.prototype.__acquire = function(args, pending, safe) { var self = this
 
   input.on('open', function(fd) {
     error.cleanup.push(function() { fs.close(fd, noop) })
-    this.__hash(input, digest, function(err) {
+    self.__hash(input, digest, function(err) {
       if (err) return error(err)
       self.__acquire(args, pending, fd)
     })
