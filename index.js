@@ -4,7 +4,7 @@ var Path = require('path')
   , fs = require('fs')
   , mkdirp = require('mkdirp')
   , through = require('through')
-  , RE_HEX = /^[0-9a-f]$/
+  , RE_HEX = /^[0-9a-f]{32,}$/
 
 function noop() {}
 function unimplemented() { throw new Error('unimplemented') }
