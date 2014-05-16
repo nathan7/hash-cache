@@ -64,21 +64,27 @@ Cache.prototype.createReadStream = function(digest) { var self = this
     .pipe(output)
 }
 
-Cache.prototype.__acquire = function(args, pending, paranoid) { var self = this
+Cache.prototype.__acquire = function(args, pending, safe) { var self = this
   var digest = args[0]
+    , error = errorFn(pending)
 
-  var input = fs.createReadStream(this._storePath(digest))
-    .on('error', function(err) {
-      if (err.code !== 'ENOENT') return pending.emit('error', err)
-      self.__acquireFresh(args, pending)
+  var paranoidRead = this.paranoid && !safe
+    , fd = typeof safe == 'number' ? safe : null
+
+  var input = fs.createReadStream(this._storePath(digest), { autoClose: !paranoidRead, fd: fd, start: 0 })
+      .on('error', function(err) {
+        if (err.code !== 'ENOENT') return error(err)
+        self.__acquireFresh(args, pending)
+      })
+
+  if (!paranoidRead) return input.on('open', function() { this.pipe(pending) })
+
+  input.on('open', function(fd) {
+    error.cleanup.push(function() { fs.close(fd, noop) })
+    this.__hash(input, digest, function(err) {
+      if (err) return error(err)
+      self.__acquire(args, pending, fd)
     })
-
-  if (!this.paranoid || paranoid === false)
-    return input.on('open', function() { this.pipe(pending) })
-
-  this.__hash(input, digest, function(err) {
-    if (err) return pending.emit(err)
-    self.__acquire(args, pending, false)
   })
 }
 
@@ -152,7 +158,7 @@ Cache.prototype.__acquireFresh = function(args, pending) { var self = this
   function deliver() {
     // up we go again
     // we explicitly disable paranoid mode, because we just checked the hash of what we wrote
-    self.__acquire(args, pending, false)
+    self.__acquire(args, pending, true)
   }
 }
 
