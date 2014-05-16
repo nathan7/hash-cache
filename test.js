@@ -6,7 +6,7 @@ var Cache = require('./')
   , through = require('through')
   , http = require('http')
   , path = __dirname + '/test'
-  , cache = Cache(path)
+  , cache = Cache({ path: path, paranoid: true })
 
 mkdirp.sync(path + '/output')
 
