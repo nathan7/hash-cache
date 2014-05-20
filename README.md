@@ -9,6 +9,8 @@
   * Be agnostic to what is being cached. As long as it arrives as a readable bytestream, it's cacheable.
   * Combine as many requests for the same thing as possible.
     Until the first byte flows out of the ReadStream, it combines every request into one.
+  * Be optimistic.
+    Don't check the cache and *then* get things from it. Try to get things from it, and if we hit an `ENOENT`, fall back.
   * Remain correct in the face of concurrency.
     We go to great lengths to ensure processes wait for each other and share work.
     Even across processes, requests are combined, safely.
