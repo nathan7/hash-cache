@@ -3,7 +3,7 @@ module.exports = Cache
 var Path = require('path')
   , fs = require('fs')
   , mkdirp = require('mkdirp')
-  , through = require('through')
+  , through = require('through2')
   , RE_HEX = /^[0-9a-f]{32,}$/
 
 function noop() {}
